@@ -104,7 +104,7 @@ async def count_tokens(text: str, model: str = "claude-sonnet-4-6") -> PrefabApp
     output_cost = get_cost(output_tokens_estimate, model, is_output=True)
     total_cost = input_cost + output_cost
 
-    with Column(gap=3, css_class="p-4") as view:
+    with Column(gap=3, css_class="p-4 max-w-sm") as view:
         Heading("🫘 Bean Counter")
 
         with Grid(min_column_width="12rem", gap=3):
