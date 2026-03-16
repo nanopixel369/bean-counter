@@ -20,13 +20,12 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages/count_tokens"
 
 PRICING = {
-    "claude-opus-4-6":  {"input": 5.00,  "output": 25.00},
+    "claude-opus-4-6":   {"input": 5.00,  "output": 25.00},
     "claude-sonnet-4-6": {"input": 3.00,  "output": 15.00},
-    "claude-haiku-4-5": {"input": 1.00,  "output": 5.00},
+    "claude-haiku-4-5":  {"input": 1.00,  "output": 5.00},
 }
 
-# Claude UI dark palette — applied to BOTH light and dark so it always renders
-# regardless of whether the host page is in light or dark mode.
+# Applied to BOTH light and dark — renders correctly regardless of host mode
 _PALETTE = {
     "background":           "#262624",
     "foreground":           "#F8F7F1",
@@ -45,10 +44,10 @@ _PALETTE = {
     "ring":                 "#D67456",
 }
 
-# Body background fills the full iframe so blank space matches the widget
-_BODY_CSS = "body, html { background: #262624 !important; margin: 0; padding: 0; }"
-
 CLAUDE_THEME = Theme(light=_PALETTE, dark=_PALETTE)
+
+# Fills the full iframe background so blank space matches the widget
+_BODY_CSS = "body, html { background: #262624 !important; margin: 0; padding: 0; }"
 
 
 async def count_tokens_api(text: str, model: str) -> dict:
@@ -98,7 +97,9 @@ async def count_tokens(text: str, model: str = "claude-sonnet-4-6") -> PrefabApp
             Heading("🫘 Bean Counter")
             Text(f"Error: Model '{model}' not supported.")
             Text(f"Available: {', '.join(available_models)}")
-        return PrefabApp(view=view, theme=CLAUDE_THEME, stylesheets=[_BODY_CSS]) = await count_tokens_api(text, model)
+        return PrefabApp(view=view, theme=CLAUDE_THEME, stylesheets=[_BODY_CSS])
+
+    token_result = await count_tokens_api(text, model)
     tokens = token_result["tokens"]
     metrics = calculate_metrics(text, tokens)
     input_cost = get_cost(tokens, model, is_output=False)
