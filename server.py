@@ -25,26 +25,30 @@ PRICING = {
     "claude-haiku-4-5": {"input": 1.00,  "output": 5.00},
 }
 
-# Claude UI dark palette injected as shadcn CSS variable overrides
-CLAUDE_THEME = Theme(
-    dark={
-        "background":           "#262624",
-        "foreground":           "#F8F7F1",
-        "card":                 "#30302E",
-        "card-foreground":      "#F8F7F1",
-        "muted":                "#30302E",
-        "muted-foreground":     "#C1BFB5",
-        "border":               "rgba(255,255,255,0.08)",
-        "input":                "rgba(255,255,255,0.08)",
-        "primary":              "#D67456",
-        "primary-foreground":   "#F8F7F1",
-        "secondary":            "#141413",
-        "secondary-foreground": "#C1BFB5",
-        "accent":               "#141413",
-        "accent-foreground":    "#F8F7F1",
-        "ring":                 "#D67456",
-    },
-)
+# Claude UI dark palette — applied to BOTH light and dark so it always renders
+# regardless of whether the host page is in light or dark mode.
+_PALETTE = {
+    "background":           "#262624",
+    "foreground":           "#F8F7F1",
+    "card":                 "#30302E",
+    "card-foreground":      "#F8F7F1",
+    "muted":                "#30302E",
+    "muted-foreground":     "#C1BFB5",
+    "border":               "rgba(255,255,255,0.08)",
+    "input":                "rgba(255,255,255,0.08)",
+    "primary":              "#D67456",
+    "primary-foreground":   "#F8F7F1",
+    "secondary":            "#141413",
+    "secondary-foreground": "#C1BFB5",
+    "accent":               "#141413",
+    "accent-foreground":    "#F8F7F1",
+    "ring":                 "#D67456",
+}
+
+# Body background fills the full iframe so blank space matches the widget
+_BODY_CSS = "body, html { background: #262624 !important; margin: 0; padding: 0; }"
+
+CLAUDE_THEME = Theme(light=_PALETTE, dark=_PALETTE)
 
 
 async def count_tokens_api(text: str, model: str) -> dict:
@@ -94,9 +98,7 @@ async def count_tokens(text: str, model: str = "claude-sonnet-4-6") -> PrefabApp
             Heading("🫘 Bean Counter")
             Text(f"Error: Model '{model}' not supported.")
             Text(f"Available: {', '.join(available_models)}")
-        return PrefabApp(view=view, theme=CLAUDE_THEME)
-
-    token_result = await count_tokens_api(text, model)
+        return PrefabApp(view=view, theme=CLAUDE_THEME, stylesheets=[_BODY_CSS]) = await count_tokens_api(text, model)
     tokens = token_result["tokens"]
     metrics = calculate_metrics(text, tokens)
     input_cost = get_cost(tokens, model, is_output=False)
@@ -141,7 +143,7 @@ async def count_tokens(text: str, model: str = "claude-sonnet-4-6") -> PrefabApp
                         Text("Total est. cost", css_class="font-semibold text-sm")
                         Text(f"${total_cost:.6f}", css_class="font-semibold text-primary text-sm")
 
-    return PrefabApp(view=view, theme=CLAUDE_THEME)
+    return PrefabApp(view=view, theme=CLAUDE_THEME, stylesheets=[_BODY_CSS])
 
 
 if __name__ == "__main__":
