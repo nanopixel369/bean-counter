@@ -123,13 +123,13 @@ async def count_tokens(text: str, model: str = "claude-sonnet-4-6") -> PrefabApp
     total_cost = input_cost + output_cost
 
     # Build the dashboard UI with Prefab components
-    with Column(gap=4, css_class="p-6") as view:
+    with Column(gap=4, css_class="p-6 bg-zinc-900 rounded-xl min-h-full") as view:
         # Header
-        Heading("🫘 Bean Counter")
+        Heading("🫘 Bean Counter", css_class="text-zinc-100")
         
         # Main metrics grid
         with Grid(min_column_width="14rem", gap=4):
-            with Card():
+            with Card(css_class="bg-zinc-800 border border-zinc-700"):
                 with CardContent():
                     Metric(
                         label="Tokens",
@@ -137,7 +137,7 @@ async def count_tokens(text: str, model: str = "claude-sonnet-4-6") -> PrefabApp
                         description="Input tokens",
                     )
             
-            with Card():
+            with Card(css_class="bg-zinc-800 border border-zinc-700"):
                 with CardContent():
                     Metric(
                         label="Characters",
@@ -145,7 +145,7 @@ async def count_tokens(text: str, model: str = "claude-sonnet-4-6") -> PrefabApp
                         description="Total characters",
                     )
             
-            with Card():
+            with Card(css_class="bg-zinc-800 border border-zinc-700"):
                 with CardContent():
                     Metric(
                         label="Words",
@@ -153,7 +153,7 @@ async def count_tokens(text: str, model: str = "claude-sonnet-4-6") -> PrefabApp
                         description="Total words",
                     )
             
-            with Card():
+            with Card(css_class="bg-zinc-800 border border-zinc-700"):
                 with CardContent():
                     Metric(
                         label="Tokens/Char",
@@ -162,45 +162,45 @@ async def count_tokens(text: str, model: str = "claude-sonnet-4-6") -> PrefabApp
                     )
 
         # Cost breakdown section
-        with Card():
+        with Card(css_class="bg-zinc-800 border border-zinc-700"):
             with CardContent():
-                Heading("💰 Cost Estimation", css_class="text-lg")
+                Heading("💰 Cost Estimation", css_class="text-lg text-zinc-100")
                 
                 with Column(gap=2):
                     with Row(gap=2, css_class="justify-between"):
-                        Text("Model:")
-                        Text(model, css_class="font-mono font-semibold")
+                        Text("Model:", css_class="text-zinc-400")
+                        Text(model, css_class="font-mono font-semibold text-zinc-100")
                     
                     with Row(gap=2, css_class="justify-between"):
-                        Text("Input Cost:")
+                        Text("Input Cost:", css_class="text-zinc-400")
                         Text(
                             f"${input_cost:.6f}",
-                            css_class="font-mono font-semibold text-blue-600",
+                            css_class="font-mono font-semibold text-amber-400",
                         )
                     
                     with Row(gap=2, css_class="justify-between"):
-                        Text("Output Est.:")
+                        Text("Output Est.:", css_class="text-zinc-400")
                         Text(
                             f"{output_tokens_estimate:,} tokens",
-                            css_class="font-mono font-semibold",
+                            css_class="font-mono font-semibold text-zinc-200",
                         )
                     
                     with Row(gap=2, css_class="justify-between"):
-                        Text("Output Cost Est.:")
+                        Text("Output Cost Est.:", css_class="text-zinc-400")
                         Text(
                             f"${output_cost:.6f}",
-                            css_class="font-mono font-semibold text-blue-600",
+                            css_class="font-mono font-semibold text-amber-400",
                         )
                     
                     # Total cost highlight
                     with Row(
                         gap=2,
-                        css_class="justify-between border-t-2 border-purple-300 pt-3 mt-3",
+                        css_class="justify-between border-t border-zinc-600 pt-3 mt-3",
                     ):
-                        Text("Total Est. Cost:", css_class="font-semibold")
+                        Text("Total Est. Cost:", css_class="font-semibold text-zinc-200")
                         Text(
                             f"${total_cost:.6f}",
-                            css_class="font-mono font-bold text-lg text-purple-600",
+                            css_class="font-mono font-bold text-lg text-amber-300",
                         )
 
     return PrefabApp(view=view)
