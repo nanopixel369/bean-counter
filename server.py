@@ -1,91 +1,80 @@
 """
 Bean Counter - MCP Token Count & Analysis Server with Interactive Dashboard
-Provides token counting, character analysis, and cost estimation for Claude models.
-Uses Prefab UI for interactive dashboard rendering in FastMCP.
+Uses Prefab UI with a custom dark Theme matching the Claude UI color palette.
 """
 
 import os
 import httpx
-from typing import Any
 from dotenv import load_dotenv
 from fastmcp import FastMCP
-from prefab_ui.app import PrefabApp
+from prefab_ui.app import PrefabApp, Theme
 from prefab_ui.components import (
-    Column,
-    Heading,
-    Grid,
-    Card,
-    CardContent,
-    Metric,
-    Text,
-    Row,
+    Column, Heading, Grid, Card, CardContent, Metric, Text, Row,
 )
 
-# Load environment variables
 load_dotenv()
 
-# Initialize FastMCP server
 mcp = FastMCP("Bean Counter")
 
-# Constants
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages/count_tokens"
 
-# Pricing per 1M tokens (as of March 2026)
 PRICING = {
-    "claude-opus-4-6": {"input": 5.00, "output": 25.00},
-    "claude-sonnet-4-6": {"input": 3.00, "output": 15.00},
-    "claude-haiku-4-5": {"input": 1.00, "output": 5.00},
+    "claude-opus-4-6":  {"input": 5.00,  "output": 25.00},
+    "claude-sonnet-4-6": {"input": 3.00,  "output": 15.00},
+    "claude-haiku-4-5": {"input": 1.00,  "output": 5.00},
 }
+
+# Claude UI dark palette injected as shadcn CSS variable overrides
+CLAUDE_THEME = Theme(
+    dark={
+        "background":           "#262624",
+        "foreground":           "#F8F7F1",
+        "card":                 "#30302E",
+        "card-foreground":      "#F8F7F1",
+        "muted":                "#30302E",
+        "muted-foreground":     "#C1BFB5",
+        "border":               "rgba(255,255,255,0.08)",
+        "input":                "rgba(255,255,255,0.08)",
+        "primary":              "#D67456",
+        "primary-foreground":   "#F8F7F1",
+        "secondary":            "#141413",
+        "secondary-foreground": "#C1BFB5",
+        "accent":               "#141413",
+        "accent-foreground":    "#F8F7F1",
+        "ring":                 "#D67456",
+    },
+)
 
 
 async def count_tokens_api(text: str, model: str) -> dict:
-    """Call Anthropic token counting API."""
     if not ANTHROPIC_API_KEY:
-        raise ValueError("ANTHROPIC_API_KEY not set in environment")
-
+        raise ValueError("ANTHROPIC_API_KEY not set")
     headers = {
         "x-api-key": ANTHROPIC_API_KEY,
         "content-type": "application/json",
         "anthropic-version": "2023-06-01",
     }
-
-    payload = {
-        "model": model,
-        "messages": [{"role": "user", "content": text}],
-    }
-
+    payload = {"model": model, "messages": [{"role": "user", "content": text}]}
     async with httpx.AsyncClient() as client:
-        response = await client.post(
-            ANTHROPIC_API_URL, json=payload, headers=headers, timeout=10.0
-        )
+        response = await client.post(ANTHROPIC_API_URL, json=payload, headers=headers, timeout=10.0)
         response.raise_for_status()
-        data = response.json()
-        return {"tokens": data.get("input_tokens", 0)}
+        return {"tokens": response.json().get("input_tokens", 0)}
 
 
 def calculate_metrics(text: str, tokens: int) -> dict:
-    """Calculate additional metrics."""
     char_count = len(text)
     word_count = len(text.split())
     tokens_per_char = tokens / char_count if char_count > 0 else 0
-
-    return {
-        "char_count": char_count,
-        "word_count": word_count,
-        "tokens_per_char": tokens_per_char,
-    }
+    return {"char_count": char_count, "word_count": word_count, "tokens_per_char": tokens_per_char}
 
 
 def get_cost(tokens: int, model: str, is_output: bool = False) -> float:
-    """Calculate estimated cost in USD."""
     if model not in PRICING:
         return 0.0
-
     key = "output" if is_output else "input"
-    price_per_million = PRICING[model].get(key, 0)
-    cost = (tokens / 1_000_000) * price_per_million
-    return cost
+    return (tokens / 1_000_000) * PRICING[model].get(key, 0)
+
 
 @mcp.tool(app=True)
 async def count_tokens(text: str, model: str = "claude-sonnet-4-6") -> PrefabApp:
@@ -99,115 +88,60 @@ async def count_tokens(text: str, model: str = "claude-sonnet-4-6") -> PrefabApp
     Returns:
         Interactive dashboard with token count, metrics, and cost estimation
     """
-    # Validate model
     available_models = list(PRICING.keys())
     if model not in available_models:
-        # Fallback UI for error case
         with Column(gap=4) as view:
             Heading("🫘 Bean Counter")
-            Text(f"Error: Model '{model}' not supported.", css_class="text-red-500")
-            Text(f"Available models: {', '.join(available_models)}")
-        return PrefabApp(view=view)
+            Text(f"Error: Model '{model}' not supported.")
+            Text(f"Available: {', '.join(available_models)}")
+        return PrefabApp(view=view, theme=CLAUDE_THEME)
 
-    # Call Anthropic API to get token count
     token_result = await count_tokens_api(text, model)
     tokens = token_result["tokens"]
-
-    # Calculate metrics
     metrics = calculate_metrics(text, tokens)
-
-    # Calculate costs
     input_cost = get_cost(tokens, model, is_output=False)
     output_tokens_estimate = tokens // 2
     output_cost = get_cost(output_tokens_estimate, model, is_output=True)
     total_cost = input_cost + output_cost
 
-    # Build the dashboard UI with Prefab components
-    with Column(gap=4, css_class="p-6 bg-[#262624] rounded-xl min-h-full") as view:
-        # Header
-        Heading("🫘 Bean Counter", css_class="text-[#F8F7F1]")
-        
-        # Main metrics grid
-        with Grid(min_column_width="14rem", gap=4):
-            with Card(css_class="bg-[#30302E] border border-[rgba(255,255,255,0.06)]"):
-                with CardContent():
-                    Metric(
-                        label="Tokens",
-                        value=f"{tokens:,}",
-                        description="Input tokens",
-                        css_class="text-[#F8F7F1]",
-                    )
-            
-            with Card(css_class="bg-[#30302E] border border-[rgba(255,255,255,0.06)]"):
-                with CardContent():
-                    Metric(
-                        label="Characters",
-                        value=f"{metrics['char_count']:,}",
-                        description="Total characters",
-                        css_class="text-[#F8F7F1]",
-                    )
-            
-            with Card(css_class="bg-[#30302E] border border-[rgba(255,255,255,0.06)]"):
-                with CardContent():
-                    Metric(
-                        label="Words",
-                        value=f"{metrics['word_count']:,}",
-                        description="Total words",
-                        css_class="text-[#F8F7F1]",
-                    )
-            
-            with Card(css_class="bg-[#141413] border border-[rgba(255,255,255,0.06)]"):
-                with CardContent():
-                    Metric(
-                        label="Tokens/Char",
-                        value=f"{metrics['tokens_per_char']:.4f}",
-                        description="Compression ratio",
-                        css_class="text-[#F8F7F1]",
-                    )
+    with Column(gap=3, css_class="p-4") as view:
+        Heading("🫘 Bean Counter")
 
-        # Cost breakdown section
-        with Card(css_class="bg-[#30302E] border border-[rgba(255,255,255,0.06)]"):
+        with Grid(min_column_width="12rem", gap=3):
+            with Card():
+                with CardContent():
+                    Metric(label="Tokens", value=f"{tokens:,}", description="Input tokens")
+            with Card():
+                with CardContent():
+                    Metric(label="Characters", value=f"{metrics['char_count']:,}", description="Total characters")
+            with Card(css_class="bg-secondary"):
+                with CardContent():
+                    Metric(label="Words", value=f"{metrics['word_count']:,}", description="Total words")
+            with Card(css_class="bg-secondary"):
+                with CardContent():
+                    Metric(label="Tokens/Char", value=f"{metrics['tokens_per_char']:.4f}", description="Compression ratio")
+
+        with Card():
             with CardContent():
-                Heading("💰 Cost Estimation", css_class="text-base text-[#F8F7F1]")
-                
-                with Column(gap=2):
-                    with Row(gap=2, css_class="justify-between"):
-                        Text("Model", css_class="text-[#C1BFB5]")
-                        Text(model, css_class="font-mono text-[#F8F7F1]")
-                    
-                    with Row(gap=2, css_class="justify-between"):
-                        Text("Input cost", css_class="text-[#C1BFB5]")
-                        Text(
-                            f"${input_cost:.6f}",
-                            css_class="text-[#F8F7F1]",
-                        )
-                    
-                    with Row(gap=2, css_class="justify-between"):
-                        Text("Output est.", css_class="text-[#C1BFB5]")
-                        Text(
-                            f"{output_tokens_estimate:,} tokens",
-                            css_class="text-[#F8F7F1]",
-                        )
-                    
-                    with Row(gap=2, css_class="justify-between"):
-                        Text("Output cost est.", css_class="text-[#C1BFB5]")
-                        Text(
-                            f"${output_cost:.6f}",
-                            css_class="text-[#F8F7F1]",
-                        )
-                    
-                    # Total cost highlight
-                    with Row(
-                        gap=2,
-                        css_class="justify-between border-t border-[rgba(255,255,255,0.08)] pt-3 mt-2",
-                    ):
-                        Text("Total est. cost", css_class="font-semibold text-[#F8F7F1]")
-                        Text(
-                            f"${total_cost:.6f}",
-                            css_class="font-semibold text-[#D67456]",
-                        )
+                Heading("💰 Cost Estimation", css_class="text-base mb-2")
+                with Column(gap=1):
+                    with Row(css_class="justify-between"):
+                        Text("Model", css_class="text-muted-foreground text-sm")
+                        Text(model, css_class="font-mono text-sm")
+                    with Row(css_class="justify-between"):
+                        Text("Input cost", css_class="text-muted-foreground text-sm")
+                        Text(f"${input_cost:.6f}", css_class="text-sm")
+                    with Row(css_class="justify-between"):
+                        Text("Output est.", css_class="text-muted-foreground text-sm")
+                        Text(f"{output_tokens_estimate:,} tokens", css_class="text-sm")
+                    with Row(css_class="justify-between"):
+                        Text("Output cost est.", css_class="text-muted-foreground text-sm")
+                        Text(f"${output_cost:.6f}", css_class="text-sm")
+                    with Row(css_class="justify-between border-t pt-2 mt-1"):
+                        Text("Total est. cost", css_class="font-semibold text-sm")
+                        Text(f"${total_cost:.6f}", css_class="font-semibold text-primary text-sm")
 
-    return PrefabApp(view=view)
+    return PrefabApp(view=view, theme=CLAUDE_THEME)
 
 
 if __name__ == "__main__":
