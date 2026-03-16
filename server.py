@@ -123,88 +123,88 @@ async def count_tokens(text: str, model: str = "claude-sonnet-4-6") -> PrefabApp
     total_cost = input_cost + output_cost
 
     # Build the dashboard UI with Prefab components
-    with Column(gap=4, css_class="p-6 bg-[#141413] rounded-xl min-h-full") as view:
+    with Column(gap=4, css_class="p-6 bg-[#262624] rounded-xl min-h-full") as view:
         # Header
-        Heading("🫘 Bean Counter", css_class="text-[#FAF9F5]")
+        Heading("🫘 Bean Counter", css_class="text-[#F8F7F1]")
         
         # Main metrics grid
         with Grid(min_column_width="14rem", gap=4):
-            with Card(css_class="bg-[#1e1d1b] border border-[#3a3835]"):
+            with Card(css_class="bg-[#30302E] border border-[rgba(255,255,255,0.06)]"):
                 with CardContent():
                     Metric(
                         label="Tokens",
                         value=f"{tokens:,}",
                         description="Input tokens",
-                        css_class="text-[#FAF9F5]",
+                        css_class="text-[#F8F7F1]",
                     )
             
-            with Card(css_class="bg-[#1e1d1b] border border-[#3a3835]"):
+            with Card(css_class="bg-[#30302E] border border-[rgba(255,255,255,0.06)]"):
                 with CardContent():
                     Metric(
                         label="Characters",
                         value=f"{metrics['char_count']:,}",
                         description="Total characters",
-                        css_class="text-[#FAF9F5]",
+                        css_class="text-[#F8F7F1]",
                     )
             
-            with Card(css_class="bg-[#1e1d1b] border border-[#3a3835]"):
+            with Card(css_class="bg-[#30302E] border border-[rgba(255,255,255,0.06)]"):
                 with CardContent():
                     Metric(
                         label="Words",
                         value=f"{metrics['word_count']:,}",
                         description="Total words",
-                        css_class="text-[#FAF9F5]",
+                        css_class="text-[#F8F7F1]",
                     )
             
-            with Card(css_class="bg-[#1e1d1b] border border-[#3a3835]"):
+            with Card(css_class="bg-[#141413] border border-[rgba(255,255,255,0.06)]"):
                 with CardContent():
                     Metric(
                         label="Tokens/Char",
                         value=f"{metrics['tokens_per_char']:.4f}",
                         description="Compression ratio",
-                        css_class="text-[#FAF9F5]",
+                        css_class="text-[#F8F7F1]",
                     )
 
         # Cost breakdown section
-        with Card(css_class="bg-[#1e1d1b] border border-[#3a3835]"):
+        with Card(css_class="bg-[#30302E] border border-[rgba(255,255,255,0.06)]"):
             with CardContent():
-                Heading("💰 Cost Estimation", css_class="text-lg text-[#FAF9F5]")
+                Heading("💰 Cost Estimation", css_class="text-base text-[#F8F7F1]")
                 
                 with Column(gap=2):
                     with Row(gap=2, css_class="justify-between"):
-                        Text("Model:", css_class="text-[#B0AEA5]")
-                        Text(model, css_class="font-mono font-semibold text-[#FAF9F5]")
+                        Text("Model", css_class="text-[#C1BFB5]")
+                        Text(model, css_class="font-mono text-[#F8F7F1]")
                     
                     with Row(gap=2, css_class="justify-between"):
-                        Text("Input Cost:", css_class="text-[#B0AEA5]")
+                        Text("Input cost", css_class="text-[#C1BFB5]")
                         Text(
                             f"${input_cost:.6f}",
-                            css_class="font-mono font-semibold text-[#D97757]",
+                            css_class="text-[#F8F7F1]",
                         )
                     
                     with Row(gap=2, css_class="justify-between"):
-                        Text("Output Est.:", css_class="text-[#B0AEA5]")
+                        Text("Output est.", css_class="text-[#C1BFB5]")
                         Text(
                             f"{output_tokens_estimate:,} tokens",
-                            css_class="font-mono font-semibold text-[#FAF9F5]",
+                            css_class="text-[#F8F7F1]",
                         )
                     
                     with Row(gap=2, css_class="justify-between"):
-                        Text("Output Cost Est.:", css_class="text-[#B0AEA5]")
+                        Text("Output cost est.", css_class="text-[#C1BFB5]")
                         Text(
                             f"${output_cost:.6f}",
-                            css_class="font-mono font-semibold text-[#D97757]",
+                            css_class="text-[#F8F7F1]",
                         )
                     
                     # Total cost highlight
                     with Row(
                         gap=2,
-                        css_class="justify-between border-t border-[#3a3835] pt-3 mt-3",
+                        css_class="justify-between border-t border-[rgba(255,255,255,0.08)] pt-3 mt-2",
                     ):
-                        Text("Total Est. Cost:", css_class="font-semibold text-[#FAF9F5]")
+                        Text("Total est. cost", css_class="font-semibold text-[#F8F7F1]")
                         Text(
                             f"${total_cost:.6f}",
-                            css_class="font-mono font-bold text-lg text-[#D97757]",
+                            css_class="font-semibold text-[#D67456]",
                         )
 
     return PrefabApp(view=view)
