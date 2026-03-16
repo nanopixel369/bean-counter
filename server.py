@@ -8,7 +8,7 @@ import httpx
 import json
 from typing import Any
 from dotenv import load_dotenv
-from fastmcp import FastMCP, Resource
+from fastmcp import FastMCP
 from fastmcp.server.apps import AppConfig
 
 # Load environment variables
