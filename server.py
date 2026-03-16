@@ -5,9 +5,11 @@ Provides token counting, character analysis, and cost estimation for Claude mode
 
 import os
 import httpx
+import json
 from typing import Any
 from dotenv import load_dotenv
-from fastmcp import FastMCP
+from fastmcp import FastMCP, Resource
+from fastmcp.server.apps import AppConfig
 
 # Load environment variables
 load_dotenv()
@@ -19,11 +21,11 @@ mcp = FastMCP("Bean Counter")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages/count_tokens"
 
-# Pricing per 1M tokens (as of March 2025)
+# Pricing per 1M tokens (as of March 2026)
 PRICING = {
-    "claude-opus-4-6": {"input": 15.00, "output": 75.00},
+    "claude-opus-4-6": {"input": 5.00, "output": 25.00},
     "claude-sonnet-4-6": {"input": 3.00, "output": 15.00},
-    "claude-haiku-4-5": {"input": 0.80, "output": 4.00},
+    "claude-haiku-4-5": {"input": 1.00, "output": 5.00},
 }
 
 
@@ -76,22 +78,23 @@ def get_cost(tokens: int, model: str, is_output: bool = False) -> float:
     return cost
 
 
-@mcp.tool()
-async def count_tokens(text: str, model: str = "claude-sonnet-4-6") -> dict[str, Any]:
+@mcp.tool(app=AppConfig())
+async def count_tokens(text: str, model: str = "claude-sonnet-4-6") -> Any:
     """
-    Count tokens in text and return analysis with cost estimation.
+    Count tokens in text and return interactive dashboard with analysis metrics.
 
     Args:
         text: The text content to analyze
         model: Claude model name (claude-opus-4-6, claude-sonnet-4-6, claude-haiku-4-5)
 
     Returns:
-        Dictionary with token count, metrics, and cost estimation
+        Interactive dashboard with token count, metrics, and cost estimation
     """
     # Validate model
     available_models = list(PRICING.keys())
     if model not in available_models:
         return {
+            "type": "error",
             "error": f"Model '{model}' not supported. Available: {available_models}"
         }
 
@@ -108,7 +111,8 @@ async def count_tokens(text: str, model: str = "claude-sonnet-4-6") -> dict[str,
     output_cost = get_cost(output_tokens_estimate, model, is_output=True)
     total_cost = input_cost + output_cost
 
-    return {
+    # Return structured data for the dashboard to render
+    result_data = {
         "model": model,
         "tokens": tokens,
         "char_count": metrics["char_count"],
@@ -119,6 +123,96 @@ async def count_tokens(text: str, model: str = "claude-sonnet-4-6") -> dict[str,
         "total_cost_estimate_usd": round(total_cost, 6),
         "output_tokens_estimate": output_tokens_estimate,
     }
+    
+    # Return with embedded HTML dashboard that will render the results
+    return {
+        "type": "text",
+        "text": format_dashboard_html(result_data)
+    }
+
+
+def format_dashboard_html(data: dict) -> str:
+    """Generate the HTML dashboard with the results data embedded."""
+    html = f"""
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px;">
+        <div style="background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); overflow: hidden;">
+            
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 24px; text-align: center;">
+                <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 8px; margin-top: 0;">🫘 Bean Counter</h1>
+                <p style="font-size: 14px; opacity: 0.9; margin: 0;">Token Analysis & Cost Estimation</p>
+            </div>
+            
+            <!-- Content -->
+            <div style="padding: 24px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                    <!-- Tokens -->
+                    <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 8px; padding: 16px; border-left: 4px solid #667eea;">
+                        <div style="font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 8px;">Tokens</div>
+                        <div style="font-size: 24px; font-weight: 700; color: #333; font-family: 'Monaco', monospace;">{data['tokens']:,}</div>
+                    </div>
+                    
+                    <!-- Characters -->
+                    <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 8px; padding: 16px; border-left: 4px solid #667eea;">
+                        <div style="font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 8px;">Characters</div>
+                        <div style="font-size: 24px; font-weight: 700; color: #333; font-family: 'Monaco', monospace;">{data['char_count']:,}</div>
+                    </div>
+                    
+                    <!-- Words -->
+                    <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 8px; padding: 16px; border-left: 4px solid #667eea;">
+                        <div style="font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 8px;">Words</div>
+                        <div style="font-size: 24px; font-weight: 700; color: #333; font-family: 'Monaco', monospace;">{data['word_count']:,}</div>
+                    </div>
+                    
+                    <!-- Ratio -->
+                    <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 8px; padding: 16px; border-left: 4px solid #667eea;">
+                        <div style="font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 8px;">Tokens/Char</div>
+                        <div style="font-size: 24px; font-weight: 700; color: #333; font-family: 'Monaco', monospace;">{data['tokens_per_char']}</div>
+                    </div>
+                    
+                    <!-- Input Cost -->
+                    <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 8px; padding: 16px; border-left: 4px solid #667eea; grid-column: 1 / -1;">
+                        <div style="font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 8px;">Est. Input Cost</div>
+                        <div style="font-size: 24px; font-weight: 700; color: #333; font-family: 'Monaco', monospace;">${data['input_cost_usd']:.6f}</div>
+                    </div>
+                </div>
+                
+                <!-- Cost Breakdown -->
+                <div style="background: #fff8f0; border-radius: 8px; padding: 16px; border-left: 4px solid #f093fb; margin-top: 20px;">
+                    <h3 style="font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 12px; margin-top: 0;">💰 Cost Breakdown</h3>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 14px; border-bottom: 1px solid rgba(240, 147, 251, 0.2);">
+                        <span style="color: #666;">Input Tokens:</span>
+                        <span style="font-weight: 600; color: #333; font-family: 'Monaco', monospace;">{data['tokens']:,}</span>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 14px; border-bottom: 1px solid rgba(240, 147, 251, 0.2);">
+                        <span style="color: #666;">Output Est.:</span>
+                        <span style="font-weight: 600; color: #333; font-family: 'Monaco', monospace;">{data['output_tokens_estimate']:,}</span>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 14px; border-bottom: 1px solid rgba(240, 147, 251, 0.2);">
+                        <span style="color: #666;">Output Cost Est.:</span>
+                        <span style="font-weight: 600; color: #333; font-family: 'Monaco', monospace;">${data['output_cost_estimate_usd']:.6f}</span>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; margin-top: 8px; border-top: 2px solid #f093fb; font-size: 16px; font-weight: 700;">
+                        <span>Total Est. Cost:</span>
+                        <span style="color: #f093fb; font-size: 20px; font-family: 'Monaco', monospace;">${data['total_cost_estimate_usd']:.6f}</span>
+                    </div>
+                </div>
+                
+                <div style="display: inline-block; background: #667eea; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 16px;">Model: {data['model']}</div>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background: #f5f7fa; padding: 16px 24px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #e0e0e0;">
+                Powered by Anthropic Token Counting API
+            </div>
+        </div>
+    </div>
+    """
+    return html
 
 
 if __name__ == "__main__":
